@@ -1,0 +1,34 @@
+models:
+- name: fct_orders
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: order_id
+    data_type: text
+    constraints:
+    - type: not_null
+  - name: location_id
+    data_type: text
+  - name: customer_id
+    data_type: text
+  - name: order_total
+    data_type: fixed
+  - name: tax_paid
+    data_type: fixed
+  - name: ordered_at
+    data_type: timestamp_ntz
+  - name: customer_name
+    data_type: text
+  - name: location_name
+    data_type: text
+  - name: tax_rate
+    data_type: fixed
+  - name: location_opened_at
+    data_type: timestamp_ntz
+  - name: ordered_month
+    data_type: fixed
+  - name: ordered_day
+    data_type: fixed
+  - name: ordered_year
+    data_type: fixed

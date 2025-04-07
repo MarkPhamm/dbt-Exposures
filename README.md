@@ -64,3 +64,104 @@ Exposures are configured in `.yml` files inside your `models/` directory. Once c
 - To run all nodes upstream of all exposures, use the command: `dbt run --select +exposure:*`
 
 You can view exposures in the docs site after running the command `dbt docs generate`. Additionally, you can view exposures configured in your main branch in dbt Explorer after successfully running a production job.
+
+# dbt Mesh  
+
+## 1. Monotholic Data Structure vs dbt Mesh
+
+### 1.1 **The challenge:** Collaboration breaks down at scale
+* Reduced Trust:  
+    - Unexpected issues due to changes made by upstream contributors  
+    - Lack of standardization in development practices  
+
+* Reduced Shipment Speed:  
+    - Central / platform team becomes a bottleneck  
+    - Onboarding new users becomes time-consuming and difficult  
+    - Challenging to find correct models to work on  
+
+* Increased Costs:  
+    - Elongated development cycles  
+    - Redundant data products, leading to higher spend  
+    - Limited visibility on data platform spend by domain  
+
+### 1.2 **The solution**: dbt Mesh 
+dbt Mesh enable domain level ownership of data - without compromising on governance or creating silos
+
+Definition: dbt Mesh is a decentralized data management architecture. In a data Mesh framework, the team not only own the data but also own the data pipeline and process of transforming it
+
+**Benefits for Teams**  
+* Domain Teams Get:  
+    - Autonomy to ship data products faster  
+    - Ability to share with and reference from other teams  
+    - Confidence that nothing breaks unexpectedly  
+
+* Central Data Teams Get:  
+    - Visibility into the full lineage of transformations  
+    - Running in a single platform (dbt)  
+    - Without acting as a bottleneck for every domain team  
+
+**Manage Interface with model governance**
+- Every model can have a **contract** that defines guarantees around data shape.  
+- Models can have **private** or **public access levels**, as well as be **grouped**. Public models can be reused across projects.  
+- When a model’s contract changes in a way that’s backwards incompatible, it should be reflected with a new **version**.  
+
+**Example:**  
+- **Particle Error**  
+  - While `model.mp_dist_project_mother_model` attempted to reference `code.model.mp_dist_project.txt_trans-label_history`, which is not allowed because the referenced code is private to the `github` group.  
+
+## 2. Model Governance
+
+### 2.1 Model Contracts
+
+#### 2.1.1 **Model Contracts Defined**
+- Allow you to *guarantee* the shape of your model  
+  - The columns & names that exist in the model  
+  - The data type of each column  
+  - If your model is materialized as **table** or **incremental** (depending on the platform)  
+
+- If the model doesn't have those exact columns with those exact data types, you'll get an error message when you try to do a dot run.
+
+#### 2.1.2 **Creating a Model Contract**
+To create a Model Contract, add a `contract:` configuration to the model YAML:
+
+1. List each expected column along with its data type  
+2. Add a `constraints` property to create stricter contracts  
+
+Example:  
+```yaml
+models:
+  - name: best_trilogy
+    group: Legions_of_the_Southlands
+    config:
+      contract:
+        enforced: True
+    columns:
+      - name: number_in_trilogy
+        data_type: float
+        constraints:
+          - type: not_null
+      - name: film_name
+        data_type: string
+```
+
+#### 2.1.3 **Model Contracts vs. Testing**
+- **Model contracts** verify the *structure of a dataset* (columns, data types), while **tests** validate the *content of a dataset*.
+
+- **Tests offer more flexibility for content validation**:
+  - Any query-based validation can be implemented as a test.
+  - Configurable severity levels and custom thresholds simplify debugging.
+  - **Limitation**: Tests run post-load; "bad data" may already exist in the model before detection.
+
+- **Key difference**:
+  - **Constraints** (in contracts) act as *pre-flight checks*: Block invalid data from entering the model if enforced by the platform.
+  - **Tests** are *post-hoc checks*: Identify issues after data is loaded.
+
+#### 2.1.4 **Model Contract Summary**
+Model contracts guarantee the number of columns, their names, and data types for a given table.
+
+With model contracts, you can:
+- Ensure the data types of your columns.
+- Ensure a model will have a desired shape.
+- Apply constraints to your model. (When applying constraints, your data platform will perform additional validations on data as it is being populated. Check our docs to see which constraints your data platform supports.)
+
+### 2.2 Model Versions
