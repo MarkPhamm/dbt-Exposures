@@ -164,4 +164,129 @@ With model contracts, you can:
 - Ensure a model will have a desired shape.
 - Apply constraints to your model. (When applying constraints, your data platform will perform additional validations on data as it is being populated. Check our docs to see which constraints your data platform supports.)
 
+---
+
 ### 2.2 Model Versions
+Model versions allow you to introduce breaking changes without disrupting downstream models immediately.
+
+**Why use model versions?**
+- Safely test prerelease changes.
+- Promote new versions as the source of truth.
+- Provide a migration window from older versions.
+
+---
+
+### 2.2.1 Implementing Model Versions
+
+#### 2.2.1.1 Create the new model file
+- Example: `model_v2.sql`
+
+#### 2.2.1.2 Add `latest_version` to the model’s YAML
+
+```yaml
+models:
+  - name: dim_customers
+    latest_version: 2
+    columns:
+      - name: customer_id
+        data_type: number
+```
+
+#### 2.2.1.3 Define all versions under `versions:`
+
+```yaml
+models:
+  - name: dim_customers
+    latest_version: 2
+    columns:
+      - name: customer_id
+        data_type: number
+      - name: number_of_orders
+        data_type: number
+    versions:
+      - v: 1
+      - v: 2
+```
+
+#### 2.2.1.4 Add column configurations per version
+
+```yaml
+versions:
+  - v: 1
+  - v: 2
+    columns:
+      include: *
+      exclude: number_of_orders
+```
+
+---
+
+### 2.2.2 Managing Aliases
+
+#### 2.2.2.1 Default behavior
+Each version creates a relation like `<model_name>_v<version>`.
+
+#### 2.2.2.2 Custom alias (optional)
+
+```yaml
+versions:
+  - v: 1
+    config:
+      alias: dim_customers
+```
+
+---
+
+### 2.2.3 Ref-ing & Running Model Versions
+
+#### 2.2.3.1 Ref a specific version
+
+```sql
+select * from {{ ref('dim_customers', v=2) }}
+```
+- If no version is specified, it defaults to the **latest**.
+
+#### 2.2.3.2 Run models
+
+- Run all versions:  
+  ```bash
+  dbt run --select dim_customers
+  ```
+
+- Run a specific version:  
+  ```bash
+  dbt run --select dim_customers_v2
+  ```
+
+- Run the latest version:  
+  ```bash
+  dbt run -s dim_customers:version:latest
+  ```
+
+---
+
+### 2.2.4 Full YAML Example
+
+```yaml
+models:
+  - name: file_name
+    latest_version: 2
+    columns:
+      - name: column_name
+        data_type: its_data_type
+      - name: a_different_column_name
+        data_type: that_columns_data_type
+    versions:
+      - v: 2
+      - v: 1
+        defined_in: file_name_v1
+        config:
+          alias: file_name
+        columns:
+          - include: *
+            exclude: a_different_column_name
+          - name: a_different_column_name
+            data_type: that_columns_data_type
+```
+
+---
