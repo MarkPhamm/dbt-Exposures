@@ -176,12 +176,12 @@ Model versions allow you to introduce breaking changes without disrupting downst
 
 ---
 
-### 2.2.1 Implementing Model Versions
+#### 2.2.1 Implementing Model Versions
 
-#### 2.2.1.1 Create the new model file
+##### 2.2.1.1 Create the new model file
 - Example: `model_v2.sql`
 
-#### 2.2.1.2 Add `latest_version` to the model’s YAML
+##### 2.2.1.2 Add `latest_version` to the model’s YAML
 
 ```yaml
 models:
@@ -192,7 +192,7 @@ models:
         data_type: number
 ```
 
-#### 2.2.1.3 Define all versions under `versions:`
+##### 2.2.1.3 Define all versions under `versions:`
 
 ```yaml
 models:
@@ -208,7 +208,7 @@ models:
       - v: 2
 ```
 
-#### 2.2.1.4 Add column configurations per version
+##### 2.2.1.4 Add column configurations per version
 
 ```yaml
 versions:
@@ -221,12 +221,12 @@ versions:
 
 ---
 
-### 2.2.2 Managing Aliases
+#### 2.2.2 Managing Aliases
 
-#### 2.2.2.1 Default behavior
+##### 2.2.2.1 Default behavior
 Each version creates a relation like `<model_name>_v<version>`.
 
-#### 2.2.2.2 Custom alias (optional)
+##### 2.2.2.2 Custom alias (optional)
 
 ```yaml
 versions:
@@ -237,16 +237,16 @@ versions:
 
 ---
 
-### 2.2.3 Ref-ing & Running Model Versions
+#### 2.2.3 Ref-ing & Running Model Versions
 
-#### 2.2.3.1 Ref a specific version
+##### 2.2.3.1 Ref a specific version
 
 ```sql
 select * from {{ ref('dim_customers', v=2) }}
 ```
 - If no version is specified, it defaults to the **latest**.
 
-#### 2.2.3.2 Run models
+##### 2.2.3.2 Run models
 
 - Run all versions:  
   ```bash
@@ -265,7 +265,7 @@ select * from {{ ref('dim_customers', v=2) }}
 
 ---
 
-### 2.2.4 Full YAML Example
+#### 2.2.4 Full YAML Example
 
 ```yaml
 models:
@@ -290,3 +290,106 @@ models:
 ```
 
 ---
+
+### 2.3 Group and Access Modifiers
+
+
+#### 2.3.1 Groups 
+* **Model Groups:** Models that are related to one another and owned by a specific team — a way for a business to organize models based on ownership (e.g., finance, marketing, employee data, etc.) rather than stage of development (e.g., staging, intermediate, etc.)
+* **Model Access Modifiers:** Which models can access (reference) a specific model
+
+Example:
+```yml
+groups:
+  - name: finance
+    owner:
+      name: Firstname Lastname
+      email: finance@jaffleshop.com
+      slack: finance-data
+      github: finance-data-team
+
+  - name: product
+    owner:
+      email: product@jaffleshop.com
+      github: product-data-team
+
+```
+
+#### 2.3.2 Access Modifiers
+* Access modifiers determine which models can access (reference) a specific model
+* There are three levels of model access that can be granted:
+
+  * **Private**
+
+    * Can only be accessed by those in the same group
+    * Upstream models that need to be further transformed before they’re ready for downstream consumption
+
+  * **Protected**
+
+    * Can only be accessed by those in the same project/package
+    * By default, all models are ‘protected’
+    * This means that other models in the same project can reference them
+    * Also upstream models
+
+  * **Public**
+
+    * Anyone can access
+    * Will enable multi-project collaboration
+    * Ready for downstream consumption
+    * Probably a marts model or a staging model referenced in other projects
+
+A **public** model or a **protected** model should be one that is guaranteed to be **ready for final use**.
+
+A **private** model should be one that you don’t really want other people pulling from. For whatever reason, the data is a private implementation detail reserved for use only by the team represented by the group, and **there are probably downstream models better suited to be pulled by others**.
+
+**Example**
+
+To assign **Access Modifiers** to a model, add the `access:` property to the model YAML file.
+Indicate the level of access you want to assign to this model:
+
+* `private` / `protected` / `public`
+
+```yaml
+models:
+    - name: model_name
+         group: group_name
+         access: access_modifer #public, private, or protecte
+```
+
+## 3. Multi-Project Collaboration
+
+### 3.1 Intro to Multi-Project Collaboration
+* Manage interfaces between contributors
+* Collaborate across multiple dbt projects
+* Intuitively navigate and explore dbt projects
+* Provide contributors the flexibility to develop the way they’re most comfortable
+
+### 3.2 Cross-Project Ref
+Contracts, versions, and access levels all serve the purpose of helping data teams collaborate well even in larger, more complex projects. But even with these in place, there are still other problems introduced by large scale:
+
+* It's hard for any contributor to have an intimate understanding of the entire dbt DAG
+* It's hard to find the right models to work on
+* It's hard to empower teams to work autonomously
+
+An enterprise dbt Cloud account is required to create multiple dbt projects.
+
+* To reference a model in another project, include a `dependencies.yml` in the downstream project listing the upstream project as a dependency:
+
+  ```yaml
+  projects:
+    - name: name_of_project
+  ```
+
+* To reference a model from another project, use the cross-project `ref` macro:
+
+  ```jinja
+  {{ ref('project_name', 'model_name') }}
+  ```
+
+* Using a cross-project `ref` macro enables multi-project lineage, which is viewable in the **Explorer** tab.
+  Multi-project lineage allows you to switch between lineage graphs of your projects.
+
+### 3.3 Cross-Project Orchestration
+Triggering a job on job completion will allow you to break free of brittle time-based dependencies and break up long-running jobs into multiple parts, improving debugging and resiliency. 
+
+To enable a job in a downstream project to trigger on completion of a job in an upstream project, toggle 'Run when another job finishes' on and select the desired job from the upstream project.
