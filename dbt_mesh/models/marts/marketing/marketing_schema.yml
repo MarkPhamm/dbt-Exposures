@@ -1,23 +1,28 @@
 version: 2
+
 models:
-- name: dim_customers
-  lastest_version: 2
-  description: One record per customer
-  columns:
-  - name: customer_id
-    description: Primary key
-    tests:
-    - unique
-    - not_null
-  - name: first_order_date
-    description: NULL when a customer has not yet placed an order.
-  versions:
-    - v: 1
-      config:
-        alias: dim_customers
-    - v: 2
-      columns:
-        - include: *
-          exclude: number_of_orders
-        - name: number_of_orders # adding number of order back
-          datatype: text # change datatypes from number to text
+  - name: dim_customers
+    latest_version: 2
+    description: One record per customer
+
+    versions:
+      - v: 1
+        config:
+          alias: dim_customers
+        columns:
+          - name: customer_id
+            description: Primary key
+            tests:
+              - unique
+              - not_null
+          - name: first_order_date
+            description: NULL when a customer has not yet placed an order.
+
+      - v: 2
+        config:
+          alias: dim_customers_v2
+        columns:
+          - include: "*"
+            exclude: [number_of_orders]
+          - name: number_of_orders
+            datatype: text
